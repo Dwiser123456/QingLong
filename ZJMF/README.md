@@ -19,15 +19,15 @@ pip install requests
 
 
 **⚙️ 使用配置**
-1. 获取 UID 和 Cookie
-登录你的魔方财务面板（如：https://example.com）
-打开浏览器开发者工具（F12）
-访问此路径：
-https://your-domain.com/addons?_plugin=4&_controller=index&_action=index
-在请求列表中找到该请求，复制 Request Headers 中的 Cookie
+1. 获取 UID 和 Cookie<br>
+登录你的魔方财务面板（如：https://example.com）<br>
+打开浏览器开发者工具（F12）<br>
+访问此路径：<br>
+https://your-domain.com/addons?_plugin=4&_controller=index&_action=index<br>
+在请求列表中找到该请求，复制 Request Headers 中的 Cookie<br>
 此页面 URL 参数中的 uid=XXXX，就是你的 UID
 
-2. 编辑脚本配置
+2. 编辑脚本配置<br>
 在 accounts 数组中，添加多个账号信息：
 
 ```
@@ -43,8 +43,8 @@ accounts = [
 ]
 ```
 
-3. 修改签到地址（如有需要）
-将以下 url 替换为你魔方财务插件的实际签到地址：
+3. 修改签到地址（如有需要）<br>
+将以下 url 替换为你魔方财务插件的实际签到地址：<br>
 url = "https://your-domain.com/addons?_plugin=4&_controller=index&_action=index"
 
 
