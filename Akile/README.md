@@ -32,7 +32,7 @@ export AKILE_ACCOUNTS="user1@example.com:pass1:JBSWY3DPEHPK3PXP|user2@example.co
 
 #### 3️⃣ 运行脚本
 ```
-python akile_checkin.py
+python qiandao.py
 ```
 
 ## 📦 特性亮点
