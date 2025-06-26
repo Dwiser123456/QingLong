@@ -15,12 +15,14 @@ export AKILE_ACCOUNTS="user1@example.com:password1:JBSWY3DPEHPK3PXP|user2@exampl
 import os
 import time
 import pyotp
+import sys
 from curl_cffi import requests
-from dotenv import load_dotenv
 from typing import Dict, List, Optional, Tuple
+from requests.exceptions import RequestException
 
-# 初始化环境变量
-load_dotenv()
+# 若不需要 .env 文件，可移除以下导入和调用
+# from dotenv import load_dotenv
+# load_dotenv()
 
 class Color:
     """控制台颜色"""
@@ -40,7 +42,7 @@ class AkileSession:
         )
         self._init_headers()
         self.session.cookies.clear()
-        
+
     def _init_headers(self):
         self.session.headers = {
             "Host": "api.akile.io",
@@ -50,6 +52,11 @@ class AkileSession:
             "Origin": "https://akile.io",
             "Content-Type": "application/json;charset=UTF-8"
         }
+
+# 定义常量
+LOGIN_URL = "https://api.akile.io/api/v1/user/login"
+INDEX_URL = "https://api.akile.io/api/v1/user/index"
+CHECKIN_URL = "https://api.akile.io/api/v1/user/Checkin"
 
 class AkileAccount:
     def __init__(self, email: str, password: str, totp_secret: str = None):
@@ -70,11 +77,11 @@ class AkileAccount:
             
             print(f"{Color.CYAN}ℹ️ 登录账户: {self.email}{Color.END}")
             response = self.session.post(
-                "https://api.akile.io/api/v1/user/login",
+                LOGIN_URL,
                 json=payload,
                 timeout=20
             )
-            
+            response.raise_for_status()  # 检查 HTTP 状态码
             data = response.json()
             
             # TOTP验证
@@ -87,10 +94,11 @@ class AkileAccount:
                 print(f"{Color.YELLOW}⚠️ 生成TOTP验证码{Color.END}")
                 
                 verify_response = self.session.post(
-                    "https://api.akile.io/api/v1/user/login",
+                    LOGIN_URL,
                     json=payload,
                     timeout=20
                 )
+                verify_response.raise_for_status()  # 检查 HTTP 状态码
                 verify_data = verify_response.json()
                 
                 if verify_data.get("status_code") == 0:
@@ -102,18 +110,21 @@ class AkileAccount:
                 
             return None, data.get("status_msg", "登录失败")
             
-        except Exception as e:
-            return None, f"登录异常: {str(e)}"
+        except RequestException as e:
+            return None, f"请求异常: {str(e)}"
+        except ValueError as e:
+            return None, f"JSON 解析失败: {str(e)}"
 
     def get_real_balance(self, token: str) -> Dict:
         """获取真实余额信息（自动转换单位为元）"""
         try:
             headers = {"Authorization": token}
             response = self.session.get(
-                "https://api.akile.io/api/v1/user/index",
+                INDEX_URL,
                 headers=headers,
                 timeout=20
             )
+            response.raise_for_status()  # 检查 HTTP 状态码
             data = response.json()
             
             if data.get("status_code") != 0:
@@ -134,26 +145,31 @@ class AkileAccount:
                 "raw_data": balance_data
             }
             
-        except Exception as e:
+        except RequestException as e:
             return {"error": f"余额请求异常: {str(e)}"}
+        except ValueError as e:
+            return {"error": f"JSON 解析失败: {str(e)}"}
 
     def checkin(self, token: str) -> Tuple[bool, str]:
         """执行签到"""
         try:
             headers = {"Authorization": token}
             response = self.session.get(
-                "https://api.akile.io/api/v1/user/Checkin",
+                CHECKIN_URL,
                 headers=headers,
                 timeout=20
             )
+            response.raise_for_status()  # 检查 HTTP 状态码
             data = response.json()
             
             if data.get("status_code") == 0 or "已签到" in data.get("status_msg", ""):
                 return True, data.get("status_msg", "签到成功")
             return False, data.get("status_msg", "签到失败")
             
-        except Exception as e:
-            return False, f"签到异常: {str(e)}"
+        except RequestException as e:
+            return False, f"签到请求异常: {str(e)}"
+        except ValueError as e:
+            return False, f"JSON 解析失败: {str(e)}"
 
 class AccountManager:
     def __init__(self):
@@ -194,7 +210,7 @@ class AccountManager:
         config_str = os.getenv("AKILE_ACCOUNTS", "")
         if not config_str:
             print(f"{Color.RED}❌ 未配置AKILE_ACCOUNTS环境变量{Color.END}")
-            return {}
+            sys.exit(1)
             
         return {acc["name"]: acc for acc in self._parse_accounts(config_str)}
     
