@@ -10,8 +10,8 @@ import sys
 import os
 
 # === Telegram 配置（写死在这里）===
-TG_BOT_TOKEN = "电报BOT秘钥"
-TG_CHAT_ID = "通知对话ID"
+TG_BOT_TOKEN = "8132944785:AAHGJn733amh0e4Nm-ubHSHny6quFXagI4s"
+TG_CHAT_ID = "5250593949"
 
 class Color:
     GREEN = '\033[92m'
