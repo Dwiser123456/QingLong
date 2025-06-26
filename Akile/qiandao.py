@@ -65,55 +65,62 @@ class AkileAccount:
         self.totp_secret = totp_secret
         self.session = AkileSession().session
         
-    def login(self) -> Tuple[Optional[str], Optional[str]]:
-        """登录流程"""
-        try:
-            payload = {
-                "email": self.email,
-                "password": self.password,
-                "token": "",
-                "verifyCode": ""
-            }
-            
-            print(f"{Color.CYAN}ℹ️ 登录账户: {self.email}{Color.END}")
-            response = self.session.post(
-                LOGIN_URL,
-                json=payload,
-                timeout=20
-            )
-            response.raise_for_status()  # 检查 HTTP 状态码
-            data = response.json()
-            
-            # TOTP验证
-            if data.get("status_code") == 0 and "二步验证" in data.get("status_msg", ""):
-                if not self.totp_secret:
-                    return None, "需要TOTP但未配置密钥"
+    class AkileAccount:
+        def login(self) -> Tuple[Optional[str], Optional[str]]:
+            """登录流程"""
+            try:
+                payload = {
+                    "email": self.email,
+                    "password": self.password,
+                    "token": "",
+                    "verifyCode": ""
+                }
                 
-                totp = pyotp.TOTP(self.totp_secret)
-                payload["token"] = totp.now()
-                print(f"{Color.YELLOW}⚠️ 生成TOTP验证码{Color.END}")
-                
-                verify_response = self.session.post(
+                print(f"{Color.CYAN}ℹ️ 登录账户: {self.email}{Color.END}")
+                response = self.session.post(
                     LOGIN_URL,
                     json=payload,
                     timeout=20
                 )
-                verify_response.raise_for_status()  # 检查 HTTP 状态码
-                verify_data = verify_response.json()
+                # 打印请求和响应信息用于调试
+                print(f"请求 URL: {LOGIN_URL}")
+                print(f"请求头: {self.session.headers}")
+                print(f"请求体: {payload}")
+                print(f"响应状态码: {response.status_code}")
+                print(f"响应内容: {response.text}")
+                response.raise_for_status()  # 检查 HTTP 状态码
+                data = response.json()
                 
-                if verify_data.get("status_code") == 0:
-                    return verify_data.get("data", {}).get("token"), None
-                return None, verify_data.get("status_msg", "TOTP验证失败")
-            
-            if data.get("status_code") == 0:
-                return data.get("data", {}).get("token"), None
+                # TOTP验证
+                if data.get("status_code") == 0 and "二步验证" in data.get("status_msg", ""):
+                    if not self.totp_secret:
+                        return None, "需要TOTP但未配置密钥"
+                    
+                    totp = pyotp.TOTP(self.totp_secret)
+                    payload["token"] = totp.now()
+                    print(f"{Color.YELLOW}⚠️ 生成TOTP验证码{Color.END}")
+                    
+                    verify_response = self.session.post(
+                        LOGIN_URL,
+                        json=payload,
+                        timeout=20
+                    )
+                    verify_response.raise_for_status()  # 检查 HTTP 状态码
+                    verify_data = verify_response.json()
+                    
+                    if verify_data.get("status_code") == 0:
+                        return verify_data.get("data", {}).get("token"), None
+                    return None, verify_data.get("status_msg", "TOTP验证失败")
                 
-            return None, data.get("status_msg", "登录失败")
-            
-        except RequestException as e:
-            return None, f"请求异常: {str(e)}"
-        except ValueError as e:
-            return None, f"JSON 解析失败: {str(e)}"
+                if data.get("status_code") == 0:
+                    return data.get("data", {}).get("token"), None
+                    
+                return None, data.get("status_msg", "登录失败")
+                
+            except RequestException as e:
+                return None, f"请求异常: {str(e)}"
+            except ValueError as e:
+                return None, f"JSON 解析失败: {str(e)}"
 
     def get_real_balance(self, token: str) -> Dict:
         """获取真实余额信息（自动转换单位为元）"""
